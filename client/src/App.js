@@ -67,14 +67,27 @@ function App() {
       } else {
         setOutput("Retry again.");
       }
-    } catch ({ response }) {
-      if (response) {
-        const errMsg = response.data.err.stderr;
-        setOutput(errMsg);
+     } catch (error) {
+  // Defensive parsing of errors from axios
+      let errObj = null;
+      if (error && error.response && error.response.data) {
+        // Prefer structured payloads returned by the server
+        const d = error.response.data;
+        // server may return { success:false, error: {...} }
+        if (d.error) errObj = d.error;
+        else errObj = d;
+      } else if (error && error.message) {
+        errObj = { message: error.message };
       } else {
-        setOutput("Please retry submitting.");
+        errObj = { message: "Unknown network error" };
       }
-    }
+
+      // Prefer stderr when present, otherwise message or details
+      const errMsg = errObj.stderr || errObj.message || errObj.details || JSON.stringify(errObj);
+      setOutput(String(errMsg));
+      setStatus("error");
+}
+    
   };
 
   const setDefaultLanguage = () => {
